@@ -27,7 +27,7 @@ with requests.Session() as s:
         html = page.text
         return bs(html, 'html.parser')
 
-    pages = int(int(sys.argv[1])/50)
+    pages = int(int(sys.argv[1])/50)+1
     num = 0
     for pn in range(pages):
         stock = s.post(url, headers=headers, verify=False, data={**param, "pn": str(pn+1)}).json()['hits']
@@ -42,4 +42,4 @@ with requests.Session() as s:
             print(f'progress.. {num}/{sys.argv[1]}')
             num += 1    
         stock_list += stock
-pd.DataFrame(stock_list).to_csv('stock_info.csv', encoding='utf-8', sep=',', index=False)
+pd.DataFrame(stock_list).to_csv('stock_info_1.csv', encoding='utf-8', sep=',', index=False)
