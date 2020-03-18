@@ -21,8 +21,25 @@ data = {
 warnings.simplefilter('ignore',InsecureRequestWarning)
 stock_list = []
 with requests.Session() as s:
+    def getBalanceSheet(pair_ID):
+        bal_url = f'https://kr.investing.com/instruments/Financials/changereporttypeajax?action=change_report_type&pair_ID={pair_ID}&report_type=BAL&period_type=Annual'
+        page = s.get(bal_url, headers=headers, verify=False, timeout=30)
+        html = page.text
+        return bs(html, 'html.parser')
+
     pages = int(int(sys.argv[1])/50)
+    num = 0
     for pn in range(pages):
-        stock = s.post(url, headers=headers, verify=False, data={**data, "pn": str(pn+1)}).json()['hits')
+        stock = s.post(url, headers=headers, verify=False, data={**data, "pn": str(pn+1)}).json()['hits']
+        for i in range(len(stock)):
+            balance_sheet = getBalanceSheet(stock[i]['pair_ID'])
+            rows = balance_sheet.select('tr.pointer')
+            for row in rows:
+                cell = row.select('td')
+                field = cell[0].text
+                data = cell[1].text
+                stock[i][field] = data
+            print(f'progress.. {num}/{sys.argv[1]}')
+            num += 1    
         stock_list += stock
 pd.DataFrame(stock_list).to_csv('stock_info.csv', encoding='utf-8', sep=',', index=False)
