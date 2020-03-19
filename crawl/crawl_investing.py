@@ -6,14 +6,6 @@ import pandas as pd
 import json
 import argparse
 
-parser = argparse.ArgumentParser(description='Crawl kr.investing.com.')
-
-PROXY = {
-    'suwon' : '168.219.61.252:8080',
-    'seoul' : '10.112.1.184:8080',
-    '' : None
-}
-
 def getProxy(place):
     if place == 'suwon': ip = '168.219.61.252:8080'
     elif place == 'seoul': ip = '10.112.1.184:8080'
@@ -25,6 +17,7 @@ def getProxy(place):
         'ftp' : f'ftp://{ip}/'
     }
 
+parser = argparse.ArgumentParser(description='Crawl kr.investing.com.')
 parser.add_argument('total_stock', help='Number of stocks', type=int)
 parser.add_argument('--proxy', '-p', help='Set proxy for company', default='', type=str, choices=['suwon', 'seoul'])
 args = parser.parse_args()
