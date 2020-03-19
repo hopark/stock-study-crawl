@@ -14,8 +14,11 @@ PROXY = {
     '' : None
 }
 
-def getProxy(ip):
-    if ip == None: return {}
+def getProxy(place):
+    if place == 'suwon': ip = '168.219.61.252:8080'
+    elif place == 'seoul': ip = '10.112.1.184:8080'
+    else: return {}
+    
     return {
         'http' : f'http://{ip}/',
         'https' : f'http://{ip}/',
@@ -25,7 +28,7 @@ def getProxy(ip):
 parser.add_argument('total_stock', help='Number of stocks', type=int)
 parser.add_argument('--proxy', '-p', help='Set proxy for company', default='', type=str, choices=['suwon', 'seoul'])
 args = parser.parse_args()
-proxies = getProxy(PROXY[args.proxy])
+proxies = getProxy(args.proxy)
 
 url = 'https://kr.investing.com/stock-screener/Service/SearchStocks'
 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36", "x-Requested-With": "XMLHttpRequest"}
