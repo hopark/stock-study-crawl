@@ -3,8 +3,29 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import warnings
 from bs4 import BeautifulSoup as bs
 import pandas as pd
-import sys
 import json
+import argparse
+
+parser = argparse.ArgumentParser(description='Crawl kr.investing.com.')
+
+PROXY = {
+    'suwon' : '168.219.61.252:8080',
+    'seoul' : '10.112.1.184:8080',
+    '' : None
+}
+
+def getProxy(ip):
+    if ip == None: return {}
+    return {
+        'http' : f'http://{ip}/',
+        'https' : f'http://{ip}/',
+        'ftp' : f'ftp://{ip}/'
+    }
+
+parser.add_argument('total_stock', help='Number of stocks', type=int)
+parser.add_argument('--proxy', '-p', help='Set proxy for company', default='', type=str, choices=['suwon', 'seoul'])
+args = parser.parse_args()
+proxies = getProxy(PROXY[args.proxy])
 
 url = 'https://kr.investing.com/stock-screener/Service/SearchStocks'
 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36", "x-Requested-With": "XMLHttpRequest"}
@@ -21,16 +42,21 @@ param = {
 warnings.simplefilter('ignore',InsecureRequestWarning)
 stock_list = []
 with requests.Session() as s:
+    s.headers = headers
+    s.timeout = 30
+    s.verify = False
+    s.proxies = proxies
+
     def getBalanceSheet(pair_ID):
         bal_url = f'https://kr.investing.com/instruments/Financials/changereporttypeajax?action=change_report_type&pair_ID={pair_ID}&report_type=BAL&period_type=Annual'
-        page = s.get(bal_url, headers=headers, verify=False, timeout=30)
+        page = s.get(bal_url)
         html = page.text
         return bs(html, 'html.parser')
 
-    pages = int(int(sys.argv[1]-1)/50)+1
+    pages = int((args.total_stock-1)/50)+1
     num = 0
     for pn in range(pages):
-        stock = s.post(url, headers=headers, verify=False, data={**param, "pn": str(pn+1)}).json()['hits']
+        stock = s.post(url, data={**param, "pn": str(pn+1)}).json()['hits']
         for i in range(len(stock)):
             balance_sheet = getBalanceSheet(stock[i]['pair_ID'])
             rows = balance_sheet.select('tr.pointer')
@@ -39,7 +65,7 @@ with requests.Session() as s:
                 field = cell[0].text
                 data = cell[1].text
                 stock[i][field] = data
-            print(f'progress.. {num}/{sys.argv[1]}')
+            print(f'progress.. {num}/{args.total_stock}')
             num += 1    
         stock_list += stock
-pd.DataFrame(stock_list).to_csv('stock_info_1.csv', encoding='utf-8', sep=',', index=False)
+pd.DataFrame(stock_list).to_csv('stock_info.csv', encoding='utf-8', sep=',', index=False)
