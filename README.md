@@ -9,10 +9,11 @@
 ```
 
 ### crawl_investing.py
+**exec**
+> $ python crawl_investing.py `total_stock` `[--proxy place]` *ex) $ python crawl_investing 2368 --proxy suwon*
 
-> $ python crawl_investing.py `total_stock_num`
->
-> ex : *$ python crawl_investing 2368*
+**help**
+> $ python crawl_investing --help
 
 - output : `stock_info.csv`
 - field : infomation of all stocks in korea & balance sheet data in last year
