@@ -27,7 +27,7 @@ with requests.Session() as s:
         html = page.text
         return bs(html, 'html.parser')
 
-    pages = int(int(sys.argv[1])/50)+1
+    pages = int(int(sys.argv[1]-1)/50)+1
     num = 0
     for pn in range(pages):
         stock = s.post(url, headers=headers, verify=False, data={**param, "pn": str(pn+1)}).json()['hits']
