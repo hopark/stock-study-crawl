@@ -2,8 +2,10 @@
 
 ## File tree
 ```
-crawl
-`-- crawl_investing.py
+.
+|-- crawl
+|   `-- crawl_investing.py
+`-- README.md
 ```
 
 ### crawl_investing.py
