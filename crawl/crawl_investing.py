@@ -42,4 +42,7 @@ with requests.Session() as s:
             print(f'progress.. {num}/{sys.argv[1]}')
             num += 1    
         stock_list += stock
-pd.DataFrame(stock_list).to_csv('stock_info_1.csv', encoding='utf-8', sep=',', index=False)
+bal_col = {'총유동자산': 'current_assets', '총 자산': 'assets', '총유동부채': 'current_liabilities', '총부채': 'liabilities', '총자본': 'capital'}
+stock_data = pd.DataFrame(stock_list)
+stock_data.rename(columns=bal_col, inplace=True)
+stock_data.to_csv('stock_info.csv', encoding='utf-8', sep=',', index=False)
