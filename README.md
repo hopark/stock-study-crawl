@@ -5,8 +5,12 @@
 .
 |-- crawl
 |   `-- crawl_investing.py
+|-- requirements.txt
 `-- README.md
 ```
+
+### install modules
+> $ pip install -r requirements.txt 
 
 ### crawl_investing.py
 **exec**
