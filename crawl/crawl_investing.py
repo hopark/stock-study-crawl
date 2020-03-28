@@ -59,7 +59,7 @@ with requests.Session() as s:
             for row in rows:
                 cell = row.select('td')
                 field = cell[0].text
-                data = cell[1].text
+                data = "" if cell[1].text == "" else int(cell[1].text)
                 stock[i][field] = data
             print(f'progress.. {num}/{args.total_stock}')
             num += 1    
