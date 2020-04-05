@@ -1,75 +1,88 @@
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import warnings
-from bs4 import BeautifulSoup as bs
 import pandas as pd
 import json
-import argparse
+import sys
 
-def getProxy(place):
-    if place == 'suwon': ip = '168.219.61.252:8080'
-    elif place == 'seoul': ip = '10.112.1.184:8080'
-    else: return {}
-    
-    return {
-        'http' : f'http://{ip}/',
-        'https' : f'http://{ip}/',
-        'ftp' : f'ftp://{ip}/'
-    }
+import syspath
+from crawl.modules import MySession as Session, constant as CONST, util
 
-parser = argparse.ArgumentParser(description='Crawl kr.investing.com.')
-parser.add_argument('total_stock', help='Number of stocks', type=int)
-parser.add_argument('--proxy', '-p', help='Set proxy for company', default='', type=str, choices=['suwon', 'seoul'])
-args = parser.parse_args()
-proxies = getProxy(args.proxy)
+warnings.simplefilter('ignore', InsecureRequestWarning)
 
-url = 'https://kr.investing.com/stock-screener/Service/SearchStocks'
-headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36", "x-Requested-With": "XMLHttpRequest"}
-param = {
-    "country[]": "11",
-    "sector": "3,1,7,6,12,2,8,9,10,11,5,4",
-    "industry": "18,53,67,89,43,31,6,38,87,77,66,81,48,16,11,54,33,24,20,29,91,36,73,21,50,3,63,7,10,86,78,101,27,90,85,82,2,96,8,22,14,45,92,65,40,70,42,39,99,98,79,64,80,15,26,44,74,97,76,88,17,12,47,62,68,83,84,57,35,72,51,25,28,5,60,19,4,61,37,34,93,71,30,102,100,58,95,94,32,13,46,1,52,23,75,56,59,41,49,55,69,9",
-    "equityType": "ORD,DRC,Preferred,Unit,ClosedEnd,REIT,ELKS,OpenEnd,Right,ParticipationShare,CapitalSecurity,PerpetualCapitalSecurity,GuaranteeCertificate,IGC,Warrant,SeniorNote,Debenture,ETF,ADR,ETC,ETN",
-    "exchange[]": ["130", "110", "60"],
-    "order[col]": "eq_market_cap",
-    "order[dir]": "d"
-}
 
-warnings.simplefilter('ignore',InsecureRequestWarning)
-stock_list = []
-with requests.Session() as s:
-    s.headers = headers
-    s.timeout = 30
-    s.verify = False
-    s.proxies = proxies
+def extractBalanceInfo(cell):
+    data = cell.select('td')
+    field = data[0].text
+    amount = "" if data[1].text == "" or data[1].text == "-" else float(
+        data[1].text)
+    return field, amount
 
-    def getBalanceSheet(pair_ID):
-        bal_url = f'https://kr.investing.com/instruments/Financials/changereporttypeajax?action=change_report_type&pair_ID={pair_ID}&report_type=BAL&period_type=Annual'
-        page = s.get(bal_url)
-        html = page.text
-        return bs(html, 'html.parser')
 
-    pages = int((args.total_stock-1)/50)+1
-    num = 0
-    for pn in range(pages):
-        stock = s.post(url, data={**param, "pn": str(pn+1)}).json()['hits']
-        for i in range(len(stock)):
-            balance_sheet = getBalanceSheet(stock[i]['pair_ID'])
-            rows = balance_sheet.select('tr.pointer')
-            for row in rows:
-                cell = row.select('td')
-                field = cell[0].text
-                data = "" if cell[1].text == "" else int(cell[1].text)
-                stock[i][field] = data
-            print(f'progress.. {num}/{args.total_stock}')
-            num += 1    
-        stock_list += stock
-stock_data = pd.DataFrame(stock_list)
-bal_col = {'총유동자산': 'current_assets', '총 자산': 'assets', '총유동부채': 'current_liabilities', '총부채': 'liabilities', '총자본': 'capital'}
-stock_data.rename(columns=bal_col, inplace=True)
+def getStockInfoByPage(session, page_num, crawl_num):
+    stock_info = session.post(CONST.SEARCH_URL, data={
+        **CONST.KOR_STOCK_PARAM, "pn": str(page_num+1)}).json()['hits'][:crawl_num]
+    stock_id_list = [stock_info[i]['pair_ID']
+                     for i in range(len(stock_info))]
+    crawled_num = len(stock_info)
+    return stock_info, stock_id_list, crawled_num
 
-columns = stock_data.columns.to_list()
-del_col = [l for l in columns for end in ['_us', '_eu', '_frmt'] if l.endswith(end)]
-stock_data.drop(columns=del_col, axis=1, inplace=True)
 
-stock_data.to_csv('stock_info.csv', encoding='utf-8', sep=',', index=False)
+def getBalanceInfoByPage(session, stock_id_list):
+    balance_info = list()
+    for stock_id in stock_id_list:
+        balance_sheet = util.getBalanceSheetHTML(session, stock_id)
+        balance_cells = balance_sheet.select('tr.pointer')
+        balance_dict = dict()
+        for cell in balance_cells:
+            field, amount = extractBalanceInfo(cell)
+            balance_dict[field] = amount
+        balance_info.append(balance_dict)
+    return balance_info
+
+
+def crawlStockInfo():
+    with Session.MySession() as session:
+        session.setOptions(headers=CONST.SEARCH_HEADER,
+                           timeout=30, verify=False, proxies=util.getProxy())
+        total_stock_info = list()
+        total_crawled_num = 0
+        total_stock_num = util.getTotalStockNum()
+        if total_stock_num == CONST.GET_ALL_STOCK:
+            total_stock_num = util.getAllStockNum(session)
+        total_page_num = int((total_stock_num-1)/CONST.STOCK_PER_PAGE)+1
+        for page_num in range(total_page_num):
+            remain_crawl_num = total_stock_num - total_crawled_num
+            crawl_num = CONST.STOCK_PER_PAGE if remain_crawl_num > CONST.STOCK_PER_PAGE else remain_crawl_num
+            stock_info, stock_id_list, crawled_num = getStockInfoByPage(
+                session, page_num, crawl_num)
+            balance_info = getBalanceInfoByPage(session, stock_id_list)
+            total_stock_info += [{**stock, **balance}
+                                 for stock, balance in zip(stock_info, balance_info)]
+            total_crawled_num += crawled_num
+            progress = total_crawled_num/total_stock_num*100
+            print(
+                f'Progress: {total_crawled_num}/{total_stock_num} ({progress:.2f}%)')
+    return total_stock_info
+
+
+def preprocessData(data):
+    columns = data.columns.to_list()
+    drop_columns = util.getDropColumns(columns)
+    data.drop(columns=drop_columns, axis=1, inplace=True)
+    rename_columns = {'총유동자산': 'current_assets', '총 자산': 'assets',
+                      '총유동부채': 'current_liabilities', '총부채': 'liabilities', '총자본': 'capital'}
+    data.rename(columns=rename_columns, inplace=True)
+    return data
+
+
+def main():
+    util.setParser()
+    total_stock_info = crawlStockInfo()
+    stock_data = pd.DataFrame(total_stock_info)
+    stock_data = preprocessData(stock_data)
+    stock_data.to_csv(CONST.OUTPUT_CSV, encoding='utf-8', sep=',', index=False)
+
+
+if __name__ == '__main__':
+    main()
