@@ -1,4 +1,4 @@
-# stock_study
+# stock-study-crawl
 
 ## File tree
 ```
