@@ -80,5 +80,24 @@ def getProfitHTML(session, stock_id):
     return html
 
 
+def areDigit(arr):
+    for val in arr:
+        if val == '' or val == '-':
+            return False
+    return True
+
+
+def getExpectedPrice(stock_info):
+    price = stock_info['avg_profit']*10
+    if price == 0:
+        return '-'
+    if areDigit([stock_info['총 자산'], stock_info['총유동부채'], stock_info['총부채'], stock_info['sharesout']]):
+        price += stock_info['총 자산'] - (stock_info['총유동부채']*1.2)
+        price -= stock_info['총부채'] - stock_info['총유동부채']
+        price /= int(stock_info['sharesout'])
+        return price
+    return '-'
+
+
 def getDropColumns(columns):
     return [l for l in columns for end in ['_us', '_eu', '_frmt'] if l.endswith(end)]

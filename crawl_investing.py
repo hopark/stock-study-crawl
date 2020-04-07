@@ -49,18 +49,18 @@ def getAverageProfitByPage(session, stock_id_list):
         num = 0
         profit_cells = profit_sheet.select(
             'table.genTbl.openTbl.companyFinancialSummaryTbl > tbody > tr')[2]
-        profit_data = [cell.text for cell in profit_cells.select('tr')[1:]]
+        profit_data = [cell.text for cell in profit_cells.select('td')[1:]]
         for data in profit_data:
             if data == '' or data == '-':
                 break
-            total += int(data)
+            total += float(data)
             num += 1
         if num == 0:
             avg = 0
         else:
             avg = total/num
-        profit_info.append({'avg_profit': avg})
-        return profit_info
+        profit_info.append({'avg_profit': avg*1000000})
+    return profit_info
 
 
 def crawlStockInfo():
@@ -89,6 +89,16 @@ def crawlStockInfo():
     return total_stock_info
 
 
+def calcStockPrice(total_stock_info):
+    total_price_info = list()
+    for stock_info in total_stock_info:
+        expected_price = util.getExpectedPrice(stock_info)
+        total_price_info.append({'expected_price': expected_price})
+    total_stock_info = [{**total_stock, **total_price}
+                        for total_stock, total_price in zip(total_stock_info, total_price_info)]
+    return total_stock_info
+
+
 def preprocessData(data):
     columns = data.columns.to_list()
     drop_columns = util.getDropColumns(columns)
@@ -102,6 +112,7 @@ def preprocessData(data):
 def main():
     util.setParser()
     total_stock_info = crawlStockInfo()
+    total_stock_info = calcStockPrice(total_stock_info)
     stock_data = pd.DataFrame(total_stock_info)
     stock_data = preprocessData(stock_data)
     stock_data.to_csv(CONST.OUTPUT_CSV, encoding='utf-8', sep=',', index=False)
