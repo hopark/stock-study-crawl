@@ -115,7 +115,8 @@ def main():
     total_stock_info = calcStockPrice(total_stock_info)
     stock_data = pd.DataFrame(total_stock_info)
     stock_data = preprocessData(stock_data)
-    stock_data.to_csv(CONST.OUTPUT_CSV, encoding='utf-8', sep=',', index=False)
+    stock_data.to_csv(CONST.OUTPUT_CSV, encoding='euc-kr',
+                      sep=',', index=False)
 
 
 if __name__ == '__main__':
