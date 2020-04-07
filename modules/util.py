@@ -62,15 +62,22 @@ def setParser():
     setProxy(args.place)
 
 
-def getBalanceSheetURL(stock_id):
-    CONST.BALANCE_SHEET_URL.format(stock_id)
+def UrlToHTML(session, url):
+    page = session.get(url)
+    html = page.text
+    return bs(html, 'html.parser')
 
 
 def getBalanceSheetHTML(session, stock_id):
     bal_url = CONST.BALANCE_SHEET_URL.format(stock_id=stock_id)
-    page = session.get(bal_url)
-    html = page.text
-    return bs(html, 'html.parser')
+    html = UrlToHTML(session, bal_url)
+    return html
+
+
+def getProfitHTML(session, stock_id):
+    profit_url = CONST.PROFIT_URL.format(stock_id=stock_id)
+    html = UrlToHTML(session, profit_url)
+    return html
 
 
 def getDropColumns(columns):

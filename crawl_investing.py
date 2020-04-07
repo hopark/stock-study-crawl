@@ -41,6 +41,28 @@ def getBalanceInfoByPage(session, stock_id_list):
     return balance_info
 
 
+def getAverageProfitByPage(session, stock_id_list):
+    profit_info = list()
+    for stock_id in stock_id_list:
+        profit_sheet = util.getProfitHTML(session, stock_id)
+        total = 0
+        num = 0
+        profit_cells = profit_sheet.select(
+            'table.genTbl.openTbl.companyFinancialSummaryTbl > tbody > tr')[2]
+        profit_data = [cell.text for cell in profit_cells.select('tr')[1:]]
+        for data in profit_data:
+            if data == '' or data == '-':
+                break
+            total += int(data)
+            num += 1
+        if num == 0:
+            avg = 0
+        else:
+            avg = total/num
+        profit_info.append({'avg_profit': avg})
+        return profit_info
+
+
 def crawlStockInfo():
     with Session.MySession() as session:
         session.setOptions(headers=CONST.SEARCH_HEADER,
@@ -57,8 +79,9 @@ def crawlStockInfo():
             stock_info, stock_id_list, crawled_num = getStockInfoByPage(
                 session, page_num, crawl_num)
             balance_info = getBalanceInfoByPage(session, stock_id_list)
-            total_stock_info += [{**stock, **balance}
-                                 for stock, balance in zip(stock_info, balance_info)]
+            profit_info = getAverageProfitByPage(session, stock_id_list)
+            total_stock_info += [{**stock, **balance, **profit}
+                                 for stock, balance, profit in zip(stock_info, balance_info, profit_info)]
             total_crawled_num += crawled_num
             progress = total_crawled_num/total_stock_num*100
             print(

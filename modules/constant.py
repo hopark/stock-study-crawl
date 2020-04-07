@@ -5,6 +5,7 @@ SEOUL_IP = '10.112.1.184:8080'
 # CRAWL
 SEARCH_VIEW_URL = 'https://kr.investing.com/stock-screener'
 SEARCH_URL = 'https://kr.investing.com/stock-screener/Service/SearchStocks'
+PROFIT_URL = 'https://kr.investing.com/instruments/Financials/changesummaryreporttypeajax?action=change_report_type&pid={stock_id}&financial_id={stock_id}&ratios_id={stock_id}&period_type=Annual'
 BALANCE_SHEET_URL = 'https://kr.investing.com/instruments/Financials/changereporttypeajax?action=change_report_type&pair_ID={stock_id}&report_type=BAL&period_type=Annual'
 SEARCH_HEADER = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36",
                  "x-Requested-With": "XMLHttpRequest"}
