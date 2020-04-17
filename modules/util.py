@@ -96,7 +96,7 @@ def getStockInfo(stock_code):
                 elif '발행주식수' in row.select_one('th.txt').text:
                     issued_num = int(re.findall('([0-9,]*?)주', row.select_one('td.num').text)[0].replace(',', ''))
         index_field = ['EPS', 'BPS', 'PER', 'industry_PER', 'PBR', 'dividend_yield']
-        index_val = [val.text.replace(',', '') for val in bs(html_text, 'html.parser').select('td.cmp-table-cell.td0301 > dl > dt > b.num')]
+        index_val = [val.text.replace(',', '').replace('N/A', '') for val in bs(html_text, 'html.parser').select('td.cmp-table-cell.td0301 > dl > dt > b.num')]
         index = {field: convertType(val) for field, val in zip(index_field, index_val)}
     except:
         raise Exception('정상주식 정보가 아닙니다.')
