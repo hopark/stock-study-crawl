@@ -8,7 +8,7 @@ import pandas as pd
 import time
 import argparse
 
-from .constant import CONST
+from modules.constant import CONST
 
 _All_STOCK_LIST = None
 _STOCK_LIST = None
@@ -37,32 +37,39 @@ def getProxy():
 
 def setAllStockList():
     global _All_STOCK_LIST
-    html = bs(GET(CONST.Url.STOCK_LIST).text, 'html.parser')
+    html = bs(GETtoLimit(CONST.Url.STOCK_LIST).text, 'html.parser')
     stock_list = html.select('form#chkFrm > div > select > option')
     all_stock_list = [(stock['value'], stock.text.replace(' ', '')) for stock in stock_list]
     _All_STOCK_LIST = all_stock_list
 
-def GET(url, headers={}):
+def getAllStockList():
+    global _All_STOCK_LIST
+    return _All_STOCK_LIST
+
+def GETtoLimit(url, limit=None, headers={}):
     tries = 0
-    while True:
+    while limit == None or tries < limit:
         try:
             return requests.get(url, headers=headers)
         except requests.exceptions.ConnectionError:
             tries += 1
             print(f'retry GET {tries} time(s).')
             time.sleep(1)
+    raise ConnectionError
 
 def getStockByCode(stock_code):
     global _All_STOCK_LIST
     for code, name in _All_STOCK_LIST:
         if code.lower() == stock_code.lower():
             return (code, name)
+    raise ValueError('Wrong stock code.')
 
 def getStockByName(stock_name):
     global _All_STOCK_LIST
     for code, name in _All_STOCK_LIST:
         if name.lower() == stock_name.lower():
             return (code, name)
+    raise ValueError('Wrong stock name.')
 
 def setStockListAsAll():
     global _STOCK_LIST, _All_STOCK_LIST
@@ -116,7 +123,7 @@ def getStockInfo(stock_code):
         global _ENCPARAM
         url = CONST.Url.STOCK_INFO.format(stock_code=stock_code)
         headers={'Referer': url}
-        html_text = GET(url, headers=headers).text
+        html_text = GETtoLimit(url, headers=headers).text
         _ENCPARAM = re.findall("encparam: '(.*?)'", html_text)[0]
         info_table = bs(html_text, 'html.parser').select('table#cTB11 > tbody > tr')
         stock_price = None
@@ -141,7 +148,7 @@ def getStockSheet(stock_code, info_type):
     global _ENCPARAM
     url = CONST.Url.STOCK_SHEET.format(stock_code=stock_code, rpt=info_type.value, encparam=_ENCPARAM)
     headers={'Referer': url}
-    data = json.loads(GET(url, headers=headers).text.replace('\\r', ' '))
+    data = json.loads(GETtoLimit(url, headers=headers).text.replace('\\r', ' '))
     try:
         data = json_normalize(data, 'DATA').sort_values(by=['ACC_NM'])
         data['ACC_NM'] = data['ACC_NM'].str.replace('.', '')
@@ -226,7 +233,7 @@ def getStockInfo(stock_code):
         global _ENCPARAM
         url = CONST.Url.STOCK_INFO.format(stock_code=stock_code)
         headers={'Referer': url}
-        html_text = GET(url, headers=headers).text
+        html_text = GETtoLimit(url, headers=headers).text
         _ENCPARAM = re.findall("encparam: '(.*?)'", html_text)[0]
         info_table = bs(html_text, 'html.parser').select('table#cTB11 > tbody > tr')
         stock_price = None
@@ -251,7 +258,7 @@ def getStockSheet(stock_code, info_type):
     global _ENCPARAM
     url = CONST.Url.STOCK_SHEET.format(stock_code=stock_code, rpt=info_type.value, encparam=_ENCPARAM)
     headers={'Referer': url}
-    data = json.loads(GET(url, headers=headers).text.replace('\\r', ' '))
+    data = json.loads(GETtoLimit(url, headers=headers).text.replace('\\r', ' '))
     try:
         data = json_normalize(data, 'DATA').sort_values(by=['ACC_NM'])
         data['ACC_NM'] = data['ACC_NM'].str.replace('.', '')
